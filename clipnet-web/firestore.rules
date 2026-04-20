@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isSelf(uid) {
+      return request.auth.uid == uid;
+    }
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isBrand() {
+      return isAuth() && getUserData().role == 'brand';
+    }
+    function isClipper() {
+      return isAuth() && getUserData().role == 'clipper';
+    }
+    function isAdmin() {
+      return isAuth() && getUserData().role == 'admin';
+    }
+
+    match /users/{uid} {
+      allow read:   if isAuth() && (isSelf(uid) || isAdmin());
+      allow create: if isAuth() && isSelf(uid);
+      allow update: if isAuth() && (isSelf(uid) || isAdmin());
+      allow delete: if false;
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if isAuth() && (
+        resource.data.status == 'active' ||
+        resource.data.brandId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isBrand() &&
+        request.resource.data.brandId == request.auth.uid &&
+        request.resource.data.cpmRate > 0 &&
+        request.resource.data.platforms.size() > 0;
+      allow update: if isBrand() &&
+        resource.data.brandId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /clips/{clipId} {
+      allow read: if isAuth() && (
+        resource.data.clipperId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isClipper() &&
+        request.resource.data.clipperId == request.auth.uid &&
+        request.resource.data.ftcConfirmed == true;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /applications/{appId} {
+      allow read: if isAuth() && (
+        resource.data.clipperId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isClipper() &&
+        request.resource.data.clipperId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /payouts/{payoutId} {
+      allow read: if isAuth() && (
+        resource.data.clipperId == request.auth.uid || isAdmin()
+      );
+      allow create, update, delete: if false;
+    }
+
+    match /socialAccounts/{docId} {
+      allow read: if isAuth() && resource.data.clipperId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
+    match /viewPollLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /stats/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

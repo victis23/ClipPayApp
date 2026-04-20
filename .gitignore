@@ -1,0 +1,17 @@
+# Environment files — never commit secrets
+.env
+.env.local
+.env*.local
+
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Firebase
+.firebase/
+
+# OS
+.DS_Store
