@@ -55,10 +55,11 @@ export default function SignupPage() {
       })
       router.replace(role === 'brand' ? '/dashboard' : '/browse')
     } catch (err) {
+      console.error('Signup error:', err)
       if (err instanceof FirebaseError) {
-        setAuthError(AUTH_ERROR_MAP[err.code] ?? 'Something went wrong. Please try again.')
+        setAuthError(AUTH_ERROR_MAP[err.code] ?? `Firebase error: ${err.code}`)
       } else {
-        setAuthError('Something went wrong. Please try again.')
+        setAuthError(`Error: ${err instanceof Error ? err.message : String(err)}`)
       }
     } finally {
       setSubmitting(false)
